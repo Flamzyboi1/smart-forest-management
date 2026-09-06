@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Management Practices</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2rem; }
+        h1 { color: #2e7d32; }
+        table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+        th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: left; }
+        th { background: #e8f5e9; }
+        nav a { margin-right: 1rem; text-decoration: none; color: #1b5e20; }
+    </style>
+</head>
+<body>
+<h1>Forest Management Practices</h1>
+<nav>
+    <a href="index.html">Dashboard</a>
+    <a href="trees.html">Tree Species</a>
+    <a href="dominant-trees.html">Dominant Trees</a>
+    <a href="water-balance.html">Soil Water Balance</a>
+    <a href="irrigation.html">Irrigation & Cost Savings</a>
+</nav>
+
+<table id="practiceTable">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Description</th>
+        <th>Water Saving (%)</th>
+        <th>Cost (per ha)</th>
+    </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+async function loadPractices() {
+    const res = await fetch('/api/trees');
+    const tbody = document.querySelector('#practiceTable tbody');
+    tbody.innerHTML = `
+      <tr><td>1</td><td>Mulching</td><td>Apply organic mulch to reduce evaporation</td><td>15</td><td>200</td></tr>
+      <tr><td>2</td><td>Drip Irrigation</td><td>Install drip irrigation system</td><td>30</td><td>1500</td></tr>
+      <tr><td>3</td><td>Thinning</td><td>Selective thinning to reduce competition</td><td>10</td><td>300</td></tr>
+    `;
+}
+loadPractices();
+</script>
+</body>
+</html>

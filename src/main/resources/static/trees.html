@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tree Species</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2rem; }
+        h1 { color: #2e7d32; }
+        table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+        th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: left; }
+        th { background: #e8f5e9; }
+        nav a { margin-right: 1rem; text-decoration: none; color: #1b5e20; }
+    </style>
+</head>
+<body>
+<h1>Tree Species & Recommendations</h1>
+<nav>
+    <a href="index.html">Dashboard</a>
+    <a href="dominant-trees.html">Dominant Trees</a>
+    <a href="practices.html">Management Practices</a>
+    <a href="water-balance.html">Soil Water Balance</a>
+    <a href="irrigation.html">Irrigation & Cost Savings</a>
+</nav>
+
+<h2>All Species</h2>
+<table id="speciesTable">
+    <thead>
+    <tr>
+        <th>Common Name</th>
+        <th>Scientific Name</th>
+        <th>Preferred Soil</th>
+        <th>Water (mm/yr)</th>
+        <th>Growth (m/yr)</th>
+        <th>Climate</th>
+    </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<h2>Recommend by Soil Type</h2>
+<label>Soil Type:
+    <input id="soilType" value="Sandy">
+</label>
+<button onclick="loadBySoil()">Load</button>
+<table id="bySoilTable">
+    <thead>
+    <tr>
+        <th>Common Name</th>
+        <th>Scientific Name</th>
+        <th>Preferred Soil</th>
+        <th>Water (mm/yr)</th>
+        <th>Growth (m/yr)</th>
+        <th>Climate</th>
+    </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+async function loadSpecies() {
+    const res = await fetch('/api/trees');
+    const data = await res.json();
+    const tbody = document.querySelector('#speciesTable tbody');
+    tbody.innerHTML = '';
+    data.forEach(s => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${s.commonName}</td><td>${s.scientificName}</td><td>${s.preferredSoilType}</td><td>${s.waterRequirementMmPerYear}</td><td>${s.growthRateMPerYear}</td><td>${s.climateZone}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+async function loadBySoil() {
+    const soil = document.getElementById('soilType').value;
+    const res = await fetch('/api/trees/by-soil?soilType=' + encodeURIComponent(soil));
+    const data = await res.json();
+    const tbody = document.querySelector('#bySoilTable tbody');
+    tbody.innerHTML = '';
+    data.forEach(s => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${s.commonName}</td><td>${s.scientificName}</td><td>${s.preferredSoilType}</td><td>${s.waterRequirementMmPerYear}</td><td>${s.growthRateMPerYear}</td><td>${s.climateZone}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+loadSpecies();
+</script>
+</body>
+</html>

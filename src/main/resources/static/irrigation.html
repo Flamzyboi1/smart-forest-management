@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Irrigation & Cost Savings</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2rem; }
+        h1 { color: #2e7d32; }
+        label { display: block; margin: 0.5rem 0; }
+        input { width: 15rem; }
+        button { margin-top: 1rem; padding: 0.5rem 1rem; }
+        #result { margin-top: 1.5rem; }
+        nav a { margin-right: 1rem; text-decoration: none; color: #1b5e20; }
+    </style>
+</head>
+<body>
+<h1>Irrigation Water & Cost Savings Calculator</h1>
+<nav>
+    <a href="index.html">Dashboard</a>
+    <a href="trees.html">Tree Species</a>
+    <a href="dominant-trees.html">Dominant Trees</a>
+    <a href="practices.html">Management Practices</a>
+    <a href="water-balance.html">Soil Water Balance</a>
+</nav>
+
+<label>
+    Baseline irrigation (mm):
+    <input id="baseline" type="number" value="100">
+</label>
+<label>
+    Water cost (per mm per ha):
+    <input id="costPerMm" type="number" value="1.5">
+</label>
+<label>
+    Area (hectares):
+    <input id="area" type="number" value="10">
+</label>
+<button onclick="calculate()">Calculate Savings</button>
+
+<div id="result"></div>
+
+<script>
+async function calculate() {
+    const baseline = document.getElementById('baseline').value;
+    const costPerMm = document.getElementById('costPerMm').value;
+    const area = document.getElementById('area').value;
+
+    const url = `/api/irrigation/savings?baselineIrrigationMm=${baseline}&waterCostPerMm=${costPerMm}&areaHectares=${area}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const div = document.getElementById('result');
+    div.innerHTML = `
+        <h2>Savings Result</h2>
+        <p>Baseline water: ${data.baselineWaterMm.toFixed(2)} mm</p>
+        <p>Optimized water: ${data.optimizedWaterMm.toFixed(2)} mm</p>
+        <p>Water saved: ${data.waterSavedMm.toFixed(2)} mm (${data.waterSavedPercent.toFixed(1)}%)</p>
+        <p>Baseline cost: ${data.baselineCost.toFixed(2)}</p>
+        <p>Optimized cost: ${data.optimizedCost.toFixed(2)}</p>
+        <p>Cost saved: ${data.costSaved.toFixed(2)} (${data.costSavedPercent.toFixed(1)}%)</p>
+        <h3>Recommended Practices</h3>
+        <ul>
+            ${data.recommendedPractices.map(p => `<li>${p.name} – ${p.description} (saves ${p.waterSavingPercent}%, cost ${p.costPerHectare}/ha)</li>`).join('')}
+        </ul>
+    `;
+}
+</script>
+</body>
+</html>

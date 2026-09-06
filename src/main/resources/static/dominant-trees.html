@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dominant Trees</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2rem; }
+        h1 { color: #2e7d32; }
+        table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+        th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: left; }
+        th { background: #e8f5e9; }
+        nav a { margin-right: 1rem; text-decoration: none; color: #1b5e20; }
+    </style>
+</head>
+<body>
+<h1>Dominant Trees</h1>
+<nav>
+    <a href="index.html">Dashboard</a>
+    <a href="trees.html">Tree Species</a>
+    <a href="practices.html">Management Practices</a>
+    <a href="water-balance.html">Soil Water Balance</a>
+    <a href="irrigation.html">Irrigation & Cost Savings</a>
+</nav>
+
+<table id="treeTable">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Species</th>
+        <th>Height (m)</th>
+        <th>DBH (cm)</th>
+        <th>Age (yr)</th>
+        <th>Health</th>
+    </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+async function loadTrees() {
+    const res = await fetch('/api/dominant-trees');
+    const data = await res.json();
+    const tbody = document.querySelector('#treeTable tbody');
+    tbody.innerHTML = '';
+    data.forEach(t => {
+        const tr = document.createElement('tr');
+        const speciesName = t.species ? t.species.commonName : '-';
+        tr.innerHTML = `<td>${t.id}</td><td>${speciesName}</td><td>${t.heightM}</td><td>${t.dbhCm}</td><td>${t.ageYears}</td><td>${t.healthStatus}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+loadTrees();
+</script>
+</body>
+</html>
