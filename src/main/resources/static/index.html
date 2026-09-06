@@ -2,23 +2,245 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Forest Management</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIINfQ7j5Lh0X3rjBVLl1W8yY3WfV8q0RVM=" crossorigin="">
     <style>
-        body { font-family: Arial, sans-serif; margin: 2rem; }
-        h1 { color: #2e7d32; }
-        nav { margin-top: 1rem; }
-        nav a { margin-right: 1rem; text-decoration: none; color: #1b5e20; }
+        :root { --forest: #1b5e20; --forest-light: #e8f5e9; --panel: #ffffff; --line: #d7e2d8; }
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; color: #1f2933; background: #f5f8f5; }
+        header { background: linear-gradient(135deg, #1b5e20, #2e7d32); color: white; padding: 1.5rem 2rem; }
+        h1 { margin: 0 0 .35rem; font-size: 1.9rem; }
+        header p { margin: 0; opacity: .92; }
+        main { max-width: 1280px; margin: 1.5rem auto; padding: 0 1rem; }
+        nav { display: flex; gap: .75rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+        nav a { background: white; color: var(--forest); border: 1px solid var(--line); border-radius: 6px; padding: .55rem .75rem; text-decoration: none; font-weight: 600; }
+        nav a:hover { background: var(--forest-light); }
+        .map-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 1rem; }
+        .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.05); overflow: hidden; }
+        #map { height: 620px; width: 100%; }
+        .controls { padding: 1rem; }
+        .controls h2 { color: var(--forest); font-size: 1.15rem; margin: 0 0 .75rem; }
+        .controls p, .controls li { color: #52616b; font-size: .92rem; line-height: 1.45; }
+        .file-label { display: block; background: var(--forest); color: white; text-align: center; padding: .7rem; border-radius: 6px; cursor: pointer; font-weight: bold; margin: .75rem 0; }
+        .file-label:hover { background: #134d19; }
+        input[type=file] { display: none; }
+        button { width: 100%; background: white; border: 1px solid #98b59b; color: var(--forest); border-radius: 6px; padding: .62rem; margin-top: .55rem; cursor: pointer; font-weight: 600; }
+        button:hover { background: var(--forest-light); }
+        #status { background: #f1f8f2; border-left: 4px solid #43a047; margin-top: 1rem; padding: .7rem; font-size: .87rem; overflow-wrap: anywhere; }
+        .legend { padding: .75rem; background: rgba(255,255,255,.94); border-radius: 5px; box-shadow: 0 1px 5px rgba(0,0,0,.2); font-size: .82rem; line-height: 1.45; }
+        .legend i { display: inline-block; width: 14px; height: 14px; margin-right: 6px; vertical-align: middle; background: #2e7d32; opacity: .7; }
+        @media (max-width: 850px) { .map-layout { grid-template-columns: 1fr; } #map { height: 480px; } }
     </style>
 </head>
 <body>
-<h1>Smart Forest Management Dashboard</h1>
-<p>Welcome to the Smart Forest Management System. Use the links below to explore the features.</p>
-<nav>
-    <a href="trees.html">Tree Species & Recommendations</a>
-    <a href="dominant-trees.html">Dominant Trees</a>
-    <a href="practices.html">Management Practices</a>
-    <a href="water-balance.html">Soil Water Balance</a>
-    <a href="irrigation.html">Irrigation & Cost Savings</a>
-</nav>
+<header>
+    <h1>Smart Forest Management</h1>
+    <p>Forest spatial data dashboard, GeoJSON viewer, and resource-management tools.</p>
+</header>
+
+<main>
+    <nav>
+        <a href="trees.html">Tree Species & Recommendations</a>
+        <a href="dominant-trees.html">Dominant Trees</a>
+        <a href="practices.html">Management Practices</a>
+        <a href="water-balance.html">Soil Water Balance</a>
+        <a href="irrigation.html">Irrigation & Cost Savings</a>
+    </nav>
+
+    <section class="map-layout">
+        <div class="card"><div id="map" aria-label="Interactive forest map"></div></div>
+        <aside class="card controls">
+            <h2>Forest Map</h2>
+            <p>Upload a local GeoJSON file to display forest boundaries, compartments, trees, paths, sampling plots, or other geographic features.</p>
+
+            <label class="file-label" for="geojsonFile">Choose GeoJSON file</label>
+            <input id="geojsonFile" type="file" accept=".geojson,.json,application/geo+json,application/json">
+            <button type="button" id="clearButton">Clear uploaded layer</button>
+            <button type="button" id="resetButton">Reset map view</button>
+            <button type="button" id="gridButton">Hide grid lines</button>
+
+            <div id="status" role="status">Map ready. Select a <strong>.geojson</strong> or <strong>.json</strong> file to begin.</div>
+
+            <h2 style="margin-top:1.25rem;">How it works</h2>
+            <ul>
+                <li>Files stay in your browser; this dashboard does not upload them to the server.</li>
+                <li>Click a feature to see its GeoJSON properties.</li>
+                <li>The map zooms automatically to the uploaded data.</li>
+                <li>Coordinate grid lines can be shown or hidden.</li>
+            </ul>
+        </aside>
+    </section>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+    const defaultCenter = [60.1699, 24.9384];
+    const defaultZoom = 6;
+
+    const map = L.map('map', { zoomControl: true }).setView(defaultCenter, defaultZoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    const layerControl = L.control.layers(null, null, { collapsed: false }).addTo(map);
+    let geoJsonLayer = null;
+    let gridLayer = null;
+    let gridVisible = true;
+    const status = document.getElementById('status');
+
+    function setStatus(message, isError = false) {
+        status.style.borderLeftColor = isError ? '#c62828' : '#43a047';
+        status.style.background = isError ? '#fff2f2' : '#f1f8f2';
+        status.innerHTML = message;
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function popupContent(feature) {
+        const props = feature.properties || {};
+        const entries = Object.entries(props);
+        if (!entries.length) return '<strong>Feature</strong><br>No properties available.';
+        return '<strong>Feature properties</strong><table style="margin-top:6px;border-collapse:collapse;">' +
+            entries.map(([key, value]) => '<tr><td style="padding:2px 8px 2px 0;font-weight:bold;vertical-align:top;">' +
+                escapeHtml(key) + '</td><td style="padding:2px 0;">' + escapeHtml(typeof value === 'object' ? JSON.stringify(value) : value) +
+                '</td></tr>').join('') + '</table>';
+    }
+
+    function styleFeature() {
+        return { color: '#1b5e20', weight: 2, opacity: 0.9, fillColor: '#66bb6a', fillOpacity: 0.35 };
+    }
+
+    function pointToLayer(feature, latlng) {
+        return L.circleMarker(latlng, { radius: 7, color: '#0d47a1', weight: 2, fillColor: '#42a5f5', fillOpacity: 0.9 });
+    }
+
+    function clearGeoJsonLayer() {
+        if (geoJsonLayer) {
+            layerControl.removeLayer(geoJsonLayer);
+            map.removeLayer(geoJsonLayer);
+            geoJsonLayer = null;
+        }
+    }
+
+    function loadGeoJson(data, fileName) {
+        clearGeoJsonLayer();
+        geoJsonLayer = L.geoJSON(data, {
+            style: styleFeature,
+            pointToLayer: pointToLayer,
+            onEachFeature: (feature, layer) => layer.bindPopup(popupContent(feature))
+        }).addTo(map);
+        layerControl.addOverlay(geoJsonLayer, 'Uploaded GeoJSON');
+
+        const featureCount = data.type === 'FeatureCollection' ? data.features.length : 1;
+        const bounds = geoJsonLayer.getBounds();
+        if (bounds.isValid()) map.fitBounds(bounds.pad(0.12));
+        setStatus('<strong>' + escapeHtml(fileName) + '</strong> loaded successfully: ' + featureCount + ' feature' + (featureCount === 1 ? '' : 's') + '. Click map features to inspect their properties.');
+    }
+
+    document.getElementById('geojsonFile').addEventListener('change', event => {
+        const file = event.target.files[0];
+        if (!file) return;
+        const validExtension = /\.(geojson|json)$/i.test(file.name);
+        if (!validExtension) {
+            setStatus('Please select a file ending in <strong>.geojson</strong> or <strong>.json</strong>.', true);
+            event.target.value = '';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = loadEvent => {
+            try {
+                const data = JSON.parse(loadEvent.target.result);
+                if (!data || !data.type) throw new Error('The file is not a valid GeoJSON object.');
+                loadGeoJson(data, file.name);
+            } catch (error) {
+                setStatus('Could not read <strong>' + escapeHtml(file.name) + '</strong>: ' + escapeHtml(error.message), true);
+            }
+        };
+        reader.onerror = () => setStatus('The selected file could not be read.', true);
+        reader.readAsText(file);
+        event.target.value = '';
+    });
+
+    document.getElementById('clearButton').addEventListener('click', () => {
+        clearGeoJsonLayer();
+        setStatus('Uploaded GeoJSON layer cleared.');
+    });
+
+    document.getElementById('resetButton').addEventListener('click', () => map.setView(defaultCenter, defaultZoom));
+
+    function gridInterval(zoom) {
+        if (zoom <= 3) return 20;
+        if (zoom <= 5) return 10;
+        if (zoom <= 7) return 5;
+        if (zoom <= 9) return 1;
+        if (zoom <= 11) return 0.5;
+        return 0.1;
+    }
+
+    function createGridLayer() {
+        const group = L.layerGroup();
+        const bounds = map.getBounds();
+        const interval = gridInterval(map.getZoom());
+        const south = Math.max(-90, bounds.getSouth());
+        const north = Math.min(90, bounds.getNorth());
+        const west = Math.max(-180, bounds.getWest());
+        const east = Math.min(180, bounds.getEast());
+        const startLat = Math.ceil(south / interval) * interval;
+        const startLng = Math.ceil(west / interval) * interval;
+        const gridStyle = { color: '#607d8b', weight: 1, opacity: 0.45, interactive: false };
+
+        for (let lat = startLat; lat <= north; lat += interval) {
+            L.polyline([[lat, west], [lat, east]], gridStyle).addTo(group);
+            L.marker([lat, west], {
+                interactive: false,
+                icon: L.divIcon({ className: 'grid-label', html: '<span style="font-size:10px;color:#37474f;background:rgba(255,255,255,.72);padding:1px 3px;">' + lat.toFixed(interval < 1 ? 1 : 0) + '°</span>' })
+            }).addTo(group);
+        }
+        for (let lng = startLng; lng <= east; lng += interval) {
+            L.polyline([[south, lng], [north, lng]], gridStyle).addTo(group);
+            L.marker([south, lng], {
+                interactive: false,
+                icon: L.divIcon({ className: 'grid-label', html: '<span style="font-size:10px;color:#37474f;background:rgba(255,255,255,.72);padding:1px 3px;">' + lng.toFixed(interval < 1 ? 1 : 0) + '°</span>' })
+            }).addTo(group);
+        }
+        return group;
+    }
+
+    function redrawGrid() {
+        if (gridLayer) map.removeLayer(gridLayer);
+        if (gridVisible) {
+            gridLayer = createGridLayer();
+            gridLayer.addTo(map);
+        }
+    }
+
+    document.getElementById('gridButton').addEventListener('click', () => {
+        gridVisible = !gridVisible;
+        document.getElementById('gridButton').textContent = gridVisible ? 'Hide grid lines' : 'Show grid lines';
+        redrawGrid();
+    });
+
+    map.on('moveend zoomend', () => { if (gridVisible) redrawGrid(); });
+    redrawGrid();
+
+    const legend = L.control({ position: 'bottomright' });
+    legend.onAdd = () => {
+        const div = L.DomUtil.create('div', 'legend');
+        div.innerHTML = '<strong>Map legend</strong><br><i></i> GeoJSON polygon / line<br><span style="color:#0d47a1;font-size:17px;vertical-align:middle;">●</span> GeoJSON point<br><span style="color:#607d8b;">— —</span> Coordinate grid';
+        return div;
+    };
+    legend.addTo(map);
+</script>
 </body>
 </html>
